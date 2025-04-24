@@ -1,0 +1,343 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --light-gray: #f5f5f5;
+    --dark-gray: #333;
+    --white: #fff;
+    --sidebar-width: 250px;
+    --collapsed-sidebar: 60px;
+    --correct-color: #27ae60;
+    --incorrect-color: #e74c3c;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    line-height: 1.6;
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--primary-color);
+    color: white;
+    transition: width 0.3s;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+    width: var(--collapsed-sidebar);
+}
+
+.sidebar.collapsed .category-name,
+.sidebar.collapsed .symbol-panel {
+    display: none;
+}
+
+.sidebar.collapsed .category-header {
+    justify-content: center;
+}
+
+.sidebar-header {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 30px;
+}
+
+.sidebar-header span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-content {
+    padding: 10px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.category {
+    margin-bottom: 5px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.category-header {
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.category-header:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.category-header i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.category-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.symbol-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 5px;
+    padding: 5px;
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    margin-top: 5px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.category.active .symbol-panel {
+    max-height: 500px;
+    padding: 5px;
+}
+
+.symbol-button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.symbol-button:hover {
+    background-color: #2980b9;
+}
+
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: var(--white);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 10px;
+}
+
+h2 {
+    color: var(--primary-color);
+    margin-top: 25px;
+}
+
+.question-creator {
+    background-color: var(--light-gray);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+textarea, input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.choice-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.choice-item input[type="text"] {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.choice-item input[type="radio"] {
+    margin-right: 10px;
+}
+
+.add-choice {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.add-choice:hover {
+    background-color: #2980b9;
+}
+
+.add-question {
+    background-color: var(--correct-color);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+}
+
+.add-question:hover {
+    background-color: #219653;
+}
+
+.test-paper {
+    margin-top: 30px;
+}
+
+.question-item {
+    background-color: var(--white);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--secondary-color);
+}
+
+.question-text {
+    margin-bottom: 15px;
+}
+
+.choices-list {
+    margin-left: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.choices-list span {
+    display: inline-block;
+    margin-right: 15px;
+    white-space: nowrap;
+}
+
+.choice-correct {
+    color: var(--correct-color);
+    font-weight: bold;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.clear-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.clear-btn:hover {
+    background-color: #c0392b;
+}
+
+.toggle-sidebar {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Inline equation styling */
+.inline-equation {
+    display: inline;
+    vertical-align: middle;
+}
+
+.empty-message {
+    color: #666;
+    text-align: center;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+    }
+    
+    .sidebar.collapsed {
+        height: 60px;
+        width: 100%;
+    }
+    
+    .sidebar.collapsed .sidebar-content {
+        display: none;
+    }
+    
+    .main-content {
+        padding: 15px;
+    }
+    
+    .symbol-panel {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+}
