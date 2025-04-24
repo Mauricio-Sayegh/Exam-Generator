@@ -109,10 +109,6 @@ $stmt->close();
                     <i class="fas fa-list"></i>
                     <span>View Exams</span>
                 </a>
-                <a href="make_a_question.php">
-                    <i class="fas fa-question-circle"></i>
-                    <span>Add New Questions</span>
-                </a>
                 <a href="profile.php">
                     <i class="fas fa-user-cog"></i>
                     <span>Profile</span>
