@@ -81,6 +81,27 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="sidebar.css">
+    <script>
+    MathJax = {
+        tex: {
+            inlineMath: [['\\(', '\\)']],
+            displayMath: [['\\[', '\\]']],
+            processEscapes: true,
+            packages: {'[+]': ['ams']}
+        },
+        startup: {
+            pageReady: () => {
+                return MathJax.startup.defaultPageReady().catch(function (err) {
+                    console.log('MathJax startup error:', err);
+                });
+            }
+        },
+        options: {
+            enableMenu: false
+        }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
 </head>
 <body>
     <div class="sidebar">

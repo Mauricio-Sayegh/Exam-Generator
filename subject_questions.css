@@ -1,4 +1,4 @@
-/* Main container */
+/* ===== BASE STYLES ===== */
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -23,7 +23,7 @@
     margin-left: 10px;
 }
 
-/* Question controls */
+/* ===== QUESTION CONTROLS ===== */
 .question-controls {
     background: #f5f5f5;
     padding: 15px;
@@ -60,6 +60,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    transition: background-color 0.2s;
 }
 
 .btn-primary {
@@ -89,7 +90,7 @@
     background-color: #c0392b;
 }
 
-/* Bulk actions */
+/* ===== BULK ACTIONS ===== */
 .bulk-actions {
     display: flex;
     gap: 10px;
@@ -113,7 +114,7 @@
     background-color: #8e44ad;
 }
 
-/* Question tabs */
+/* ===== TABS ===== */
 .question-tabs {
     display: flex;
     border-bottom: 1px solid #ddd;
@@ -128,6 +129,7 @@
     cursor: pointer;
     font-weight: 500;
     color: #555;
+    transition: all 0.2s;
 }
 
 .tab-btn.active {
@@ -137,14 +139,17 @@
 
 .tab-content {
     display: none;
+    padding: 20px 0;
 }
 
 .tab-content.active {
     display: block;
 }
 
-/* Question cards */
-.questions-container {
+/* ===== QUESTION CARDS (APPLIES TO ALL TABS) ===== */
+.questions-container,
+.group-questions,
+.difficulty-questions {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
@@ -256,25 +261,59 @@
     color: #e74c3c !important;
 }
 
-/* No questions */
-.no-questions {
+/* ===== GROUP & DIFFICULTY SECTIONS ===== */
+.group-section,
+.difficulty-section {
+    margin-bottom: 30px;
+}
+
+.group-header,
+.difficulty-header {
+    background-color: #f5f5f5;
+    padding: 12px 15px;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    border-radius: 5px;
+}
+
+/* ===== EMPTY STATES ===== */
+.no-questions,
+.no-groups {
     text-align: center;
     padding: 50px 20px;
     color: #777;
 }
 
-.no-questions i {
+.no-questions i,
+.no-groups i {
     font-size: 50px;
     margin-bottom: 15px;
     color: #ddd;
 }
 
-.no-questions p {
+.no-questions p,
+.no-groups p {
     margin-bottom: 20px;
     font-size: 18px;
 }
 
-/* Pagination */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: #d9534f;
+    padding: 20px;
+    background: #f8d7da;
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+/* ===== PAGINATION ===== */
 .pagination {
     display: flex;
     justify-content: center;
@@ -302,7 +341,7 @@
     color: #777;
 }
 
-/* Modal */
+/* ===== MODAL ===== */
 .modal {
     display: none;
     position: fixed;
@@ -350,6 +389,7 @@
     background-color: #7f8c8d;
 }
 
+/* ===== MATHJAX ===== */
 .question-text {
     visibility: hidden;
 }
@@ -358,9 +398,11 @@
     visibility: visible;
 }
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-    .questions-container {
+    .questions-container,
+    .group-questions,
+    .difficulty-questions {
         grid-template-columns: 1fr;
     }
     
@@ -372,5 +414,11 @@
     .modal-content {
         width: 95%;
         margin: 10% auto;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
 }

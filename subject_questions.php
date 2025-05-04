@@ -109,6 +109,20 @@ $group_stmt->execute();
 $groups = $group_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $group_stmt->close();
 
+$universities = [] ;
+$stmt = $conn->prepare("
+    SELECT u.university_name_en 
+    FROM university as u INNER JOIN professor_university as pu on u.university_ID = pu.university_ID
+    where pu.professor_ID = ?
+");
+$stmt->bind_param("i", $professor_id);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $universities[] = $row;
+}
+$stmt->close();
+
 $conn->close();
 ?>
 
@@ -154,7 +168,21 @@ $conn->close();
                 </div>
                 <div class="user-info">
                     <h3><?php echo htmlspecialchars($_SESSION['name']); ?></h3>
-                    <p>Professor</p>
+                    <p>Professor in 
+                        <?php 
+                            for ($i = 0; $i < count($universities); $i++) {
+                                echo htmlspecialchars($universities[$i]['university_name_en']) ;
+                                if ( count($universities) > 1 ) {
+                                    if ( $i+2 == count($universities) ) {
+                                        echo htmlspecialchars(" and ") ;
+                                    }
+                                    else if ( $i+1 != count($universities) ) {
+                                        echo htmlspecialchars(', ') ;
+                                    }
+                                }
+                            }
+                        ?> 
+                    </p>
                 </div>
             </div>
             
@@ -314,6 +342,16 @@ $conn->close();
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
+            </div>
+
+             <!-- By Groups Tab -->
+             <div class="tab-content" id="groups-tab">
+                <div class="loading">Loading group questions...</div>
+            </div>
+
+            <!-- By Difficulty Tab -->
+            <div class="tab-content" id="difficulty-tab">
+                <div class="loading">Loading questions by difficulty...</div>
             </div>
 
             <!-- Pagination -->

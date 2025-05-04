@@ -1,83 +1,108 @@
+/**
+ * Subject Questions Management System
+ * Handles:
+ * - Tab navigation
+ * - Bulk actions (delete, change difficulty, group, export)
+ * - Question filtering
+ * - MathJax rendering
+ * - Question loading
+ */
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab functionality
+    // Initialize all functionality
+    initTabs();
+    initBulkActions();
+    initQuickDelete();
+    renderMath();
+});
+
+// ========================
+// CORE FUNCTIONALITY
+// ========================
+
+function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
     
     tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Remove active class from all buttons and contents
+        button.addEventListener('click', function() {
+            // Update UI
             tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
             
-            // Add active class to clicked button and corresponding content
-            button.classList.add('active');
-            const tabId = button.getAttribute('data-tab');
-            document.getElementById(`${tabId}-tab`).classList.add('active');
+            this.classList.add('active');
+            const tabId = this.getAttribute('data-tab');
+            const tabContent = document.getElementById(`${tabId}-tab`);
+            tabContent.classList.add('active');
             
-            // Load content if needed (for groups and difficulty tabs)
-            if (tabId !== 'all') {
+            // Load content if not already loaded
+            if (tabId !== 'all' && !tabContent.dataset.loaded) {
                 loadTabContent(tabId);
+                tabContent.dataset.loaded = true;
             }
         });
     });
     
-    // Bulk actions
+    // Load initial tab
+    const activeTab = document.querySelector('.tab-btn.active') || tabButtons[0];
+    if (activeTab) {
+        const tabId = activeTab.getAttribute('data-tab');
+        const tabContent = document.getElementById(`${tabId}-tab`);
+        if (tabId !== 'all' && tabContent && !tabContent.dataset.loaded) {
+            loadTabContent(tabId);
+            tabContent.dataset.loaded = true;
+        }
+    }
+}
+
+function initBulkActions() {
     const bulkActionSelect = document.getElementById('bulk-action');
     const applyBulkActionBtn = document.getElementById('apply-bulk-action');
     const modal = document.getElementById('bulk-modal');
     const closeModalButtons = document.querySelectorAll('.close-modal');
     const confirmBulkActionBtn = document.getElementById('confirm-bulk-action');
-    
-    applyBulkActionBtn.addEventListener('click', () => {
+
+    applyBulkActionBtn?.addEventListener('click', () => {
         const action = bulkActionSelect.value;
         const selectedQuestions = getSelectedQuestions();
         
-        if (action === '' || selectedQuestions.length === 0) {
-            alert('Please select an action and at least one question');
+        if (!action || selectedQuestions.length === 0) {
+            showAlert('Please select an action and at least one question', 'error');
             return;
         }
         
         openBulkModal(action, selectedQuestions);
     });
-    
+
     closeModalButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
+        button.addEventListener('click', () => modal.style.display = 'none');
     });
-    
+
     window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
+        if (event.target === modal) modal.style.display = 'none';
     });
-    
-    // Confirm bulk action
-    confirmBulkActionBtn.addEventListener('click', () => {
+
+    confirmBulkActionBtn?.addEventListener('click', () => {
         const action = document.getElementById('modal-title').getAttribute('data-action');
         const selectedQuestions = document.getElementById('modal-title').getAttribute('data-questions').split(',');
         
         switch(action) {
-            case 'delete':
-                deleteQuestions(selectedQuestions);
+            case 'delete': deleteQuestions(selectedQuestions); break;
+            case 'change-difficulty': 
+                updateQuestionDifficulty(selectedQuestions, document.getElementById('bulk-difficulty').value); 
                 break;
-            case 'change-difficulty':
-                const difficulty = document.getElementById('bulk-difficulty').value;
-                updateQuestionDifficulty(selectedQuestions, difficulty);
+            case 'group': 
+                addQuestionsToGroup(selectedQuestions, document.getElementById('bulk-group-num').value); 
                 break;
-            case 'group':
-                const groupNum = document.getElementById('bulk-group-num').value;
-                addQuestionsToGroup(selectedQuestions, groupNum);
-                break;
-            case 'export':
-                exportQuestions(selectedQuestions);
-                break;
+            case 'export': exportQuestions(selectedQuestions); break;
         }
         
         modal.style.display = 'none';
     });
-    
-    // Quick delete buttons
+}
+
+function initQuickDelete() {
     document.querySelectorAll('.quick-delete').forEach(button => {
         button.addEventListener('click', function(e) {
             if (!confirm('Are you sure you want to delete this question?')) {
@@ -85,12 +110,106 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-});
+}
+
+// ========================
+// UTILITY FUNCTIONS
+// ========================
 
 function getSelectedQuestions() {
-    const checkboxes = document.querySelectorAll('.question-checkbox:checked');
-    return Array.from(checkboxes).map(checkbox => checkbox.value);
+    return Array.from(document.querySelectorAll('.question-checkbox:checked'))
+        .map(checkbox => checkbox.value);
 }
+
+function renderMath() {
+    if (typeof MathJax !== 'undefined') {
+        // Wait for MathJax to be fully loaded
+        if (MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+                .then(() => document.body.classList.add('mathjax-processed'))
+                .catch(err => console.error('MathJax error:', err));
+        } else {
+            // If MathJax is still loading, retry after a short delay
+            setTimeout(renderMath, 100);
+        }
+    }
+}
+
+function showAlert(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `global-alert alert-${type}`;
+    alert.textContent = message;
+    
+    // Style the alert
+    Object.assign(alert.style, {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        padding: '10px 20px',
+        backgroundColor: type === 'error' ? '#f8d7da' : 
+                        type === 'success' ? '#d4edda' : '#d1ecf1',
+        color: type === 'error' ? '#721c24' : 
+               type === 'success' ? '#155724' : '#0c5460',
+        borderRadius: '4px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        zIndex: '1000',
+        animation: 'fadeIn 0.3s'
+    });
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.style.animation = 'fadeOut 0.3s';
+        setTimeout(() => alert.remove(), 300);
+    }, 5000);
+}
+
+// ========================
+// TAB CONTENT LOADING
+// ========================
+
+function loadTabContent(tabId) {
+    const tabContent = document.getElementById(`${tabId}-tab`);
+    const subjectId = new URLSearchParams(window.location.search).get('subject_id');
+    
+    if (!tabContent || !subjectId) return;
+    
+    // Show loading state
+    tabContent.innerHTML = '<div class="loading">Loading questions...</div>';
+    
+    // Include current search/filter parameters
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    fetch(`ajax/load_tab.php?tab=${tabId}&subject_id=${subjectId}&${searchParams.toString()}`)
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return response.text();
+    })
+    .then(html => {
+        if (html.trim() === '') {
+            tabContent.innerHTML = '<div class="no-questions">No questions found in this view</div>';
+        } else {
+            tabContent.innerHTML = html;
+            renderMath(); // Render any LaTeX in the new content
+            
+            // Initialize any interactive elements in the new content
+            initQuickDelete();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading tab content:', error);
+        tabContent.innerHTML = `
+            <div class="error">
+                Error loading questions. 
+                <button onclick="loadTabContent('${tabId}')">Try again</button>
+            </div>
+        `;
+    });
+}
+
+// ========================
+// BULK ACTION FUNCTIONS
+// ========================
 
 function openBulkModal(action, questionIds) {
     const modalTitle = document.getElementById('modal-title');
@@ -99,143 +218,136 @@ function openBulkModal(action, questionIds) {
     modalTitle.setAttribute('data-action', action);
     modalTitle.setAttribute('data-questions', questionIds.join(','));
     
-    switch(action) {
-        case 'delete':
-            modalTitle.textContent = 'Confirm Delete';
-            modalBody.innerHTML = `
-                <p>You are about to delete ${questionIds.length} question(s). This action cannot be undone.</p>
-                <p>Are you sure you want to proceed?</p>
-            `;
-            break;
-            
-        case 'change-difficulty':
-            modalTitle.textContent = 'Change Difficulty';
-            modalBody.innerHTML = `
-                <p>You are changing the difficulty for ${questionIds.length} question(s).</p>
-                <div class="form-group">
-                    <label for="bulk-difficulty">New Difficulty:</label>
-                    <select id="bulk-difficulty" class="form-control">
-                        <option value="1">Easy</option>
-                        <option value="2">Medium</option>
-                        <option value="3">Hard</option>
-                    </select>
-                </div>
-            `;
-            break;
-            
-        case 'group':
-            modalTitle.textContent = 'Add to Group';
-            modalBody.innerHTML = `
-                <p>You are adding ${questionIds.length} question(s) to a group.</p>
-                <div class="form-group">
-                    <label for="bulk-group-num">Group Number:</label>
-                    <input type="number" id="bulk-group-num" class="form-control" min="1" required>
-                </div>
-                <p class="text-muted">Enter 0 to remove from group</p>
-            `;
-            break;
-            
-        case 'export':
-            modalTitle.textContent = 'Export Questions';
-            modalBody.innerHTML = `
-                <p>You are about to export ${questionIds.length} question(s).</p>
-                <div class="form-group">
-                    <label for="export-format">Format:</label>
-                    <select id="export-format" class="form-control">
-                        <option value="pdf">PDF</option>
-                        <option value="word">Word Document</option>
-                        <option value="text">Plain Text</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="include-answers">Include Answers:</label>
-                    <input type="checkbox" id="include-answers" checked>
-                </div>
-            `;
-            break;
-    }
+    const templates = {
+        'delete': `
+            <p>You are about to delete ${questionIds.length} question(s). This action cannot be undone.</p>
+            <p>Are you sure you want to proceed?</p>
+        `,
+        'change-difficulty': `
+            <p>Changing difficulty for ${questionIds.length} question(s).</p>
+            <div class="form-group">
+                <label for="bulk-difficulty">New Difficulty:</label>
+                <select id="bulk-difficulty" class="form-control">
+                    <option value="1">Easy</option>
+                    <option value="2">Medium</option>
+                    <option value="3">Hard</option>
+                </select>
+            </div>
+        `,
+        'group': `
+            <p>Adding ${questionIds.length} question(s) to a group.</p>
+            <div class="form-group">
+                <label for="bulk-group-num">Group Number:</label>
+                <input type="number" id="bulk-group-num" class="form-control" min="1" required>
+            </div>
+            <p class="text-muted">Enter 0 to remove from group</p>
+        `,
+        'export': `
+            <p>Exporting ${questionIds.length} question(s).</p>
+            <div class="form-group">
+                <label for="export-format">Format:</label>
+                <select id="export-format" class="form-control">
+                    <option value="pdf">PDF</option>
+                    <option value="word">Word Document</option>
+                    <option value="text">Plain Text</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="include-answers">Include Answers:</label>
+                <input type="checkbox" id="include-answers" checked>
+            </div>
+        `
+    };
     
-    modal.style.display = 'block';
+    modalTitle.textContent = {
+        'delete': 'Confirm Delete',
+        'change-difficulty': 'Change Difficulty',
+        'group': 'Add to Group',
+        'export': 'Export Questions'
+    }[action];
+    
+    modalBody.innerHTML = templates[action];
+    document.getElementById('bulk-modal').style.display = 'block';
+}
+
+async function performAjaxAction(url, data, successMessage) {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        let result;
+        try {
+            result = await response.json();
+        } catch (parseError) {
+            if (response.ok) {
+                // If response is OK but not JSON, consider it a success
+                showAlert(successMessage, 'success');
+                return true;
+            }
+            throw new Error('Invalid response format');
+        }
+
+        // Check for explicit failure
+        if (result.success === false && result.message) {
+            throw new Error(result.message);
+        }
+
+        // Consider it a success if we got here
+        showAlert(successMessage, 'success');
+        return true;
+    } catch (error) {
+        console.error('API Error:', error);
+        showAlert(error.message || 'An error occurred', 'error');
+        return false;
+    }
 }
 
 function deleteQuestions(questionIds) {
-    // AJAX call to delete questions
-    fetch('ajax/delete_questions.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question_ids: questionIds })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Remove deleted questions from DOM
+    performAjaxAction(
+        'ajax/delete_questions.php',
+        { question_ids: questionIds },
+        `${questionIds.length} question(s) deleted successfully`
+    ).then(success => {
+        if (success) {
             questionIds.forEach(id => {
-                document.querySelector(`.question-card[data-id="${id}"]`).remove();
+                document.querySelector(`.question-card[data-id="${id}"]`)?.remove();
             });
-            alert(`${questionIds.length} question(s) deleted successfully`);
-        } else {
-            alert('Error deleting questions: ' + data.message);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while deleting questions');
     });
 }
 
 function updateQuestionDifficulty(questionIds, difficulty) {
-    // AJAX call to update difficulty
-    fetch('ajax/update_difficulty.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            question_ids: questionIds,
-            difficulty: difficulty
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update difficulty badges in DOM
+    performAjaxAction(
+        'ajax/update_difficulty.php',
+        { question_ids: questionIds, difficulty: difficulty },
+        'Difficulty updated successfully'
+    ).then(success => {
+        if (success) {
             questionIds.forEach(id => {
                 const card = document.querySelector(`.question-card[data-id="${id}"]`);
-                if (card) {
-                    const badge = card.querySelector('.difficulty-badge');
+                const badge = card?.querySelector('.difficulty-badge');
+                if (badge) {
                     badge.className = `difficulty-badge difficulty-${difficulty}`;
                     badge.textContent = ['Easy', 'Medium', 'Hard'][difficulty - 1];
                 }
             });
-            alert('Difficulty updated successfully');
-        } else {
-            alert('Error updating difficulty: ' + data.message);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while updating difficulty');
     });
 }
 
 function addQuestionsToGroup(questionIds, groupNum) {
-    // AJAX call to add questions to group
-    fetch('ajax/update_group.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            question_ids: questionIds,
-            group_num: groupNum
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update group badges in DOM
+    performAjaxAction(
+        'ajax/update_group.php',
+        { question_ids: questionIds, group_num: groupNum },
+        'Group updated successfully'
+    ).then(success => {
+        if (success) {
             questionIds.forEach(id => {
                 const card = document.querySelector(`.question-card[data-id="${id}"]`);
                 if (card) {
@@ -253,91 +365,44 @@ function addQuestionsToGroup(questionIds, groupNum) {
                     }
                 }
             });
-            alert('Group updated successfully');
-        } else {
-            alert('Error updating group: ' + data.message);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while updating group');
     });
 }
 
 function exportQuestions(questionIds) {
-    const format = document.getElementById('export-format').value;
-    const includeAnswers = document.getElementById('include-answers').checked;
-    
-    // Create a form and submit it to trigger download
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'export_questions.php';
     
-    const idsInput = document.createElement('input');
-    idsInput.type = 'hidden';
-    idsInput.name = 'question_ids';
-    idsInput.value = questionIds.join(',');
-    form.appendChild(idsInput);
+    const fields = {
+        'question_ids': questionIds.join(','),
+        'format': document.getElementById('export-format').value,
+        'include_answers': document.getElementById('include-answers').checked ? '1' : '0'
+    };
     
-    const formatInput = document.createElement('input');
-    formatInput.type = 'hidden';
-    formatInput.name = 'format';
-    formatInput.value = format;
-    form.appendChild(formatInput);
-    
-    const answersInput = document.createElement('input');
-    answersInput.type = 'hidden';
-    answersInput.name = 'include_answers';
-    answersInput.value = includeAnswers ? '1' : '0';
-    form.appendChild(answersInput);
+    Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    });
     
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);
 }
 
-function loadTabContent(tabId) {
-    const subjectId = new URLSearchParams(window.location.search).get('subject_id');
-    
-    // Show loading state
-    const tabContent = document.getElementById(`${tabId}-tab`);
-    tabContent.innerHTML = '<div class="loading">Loading...</div>';
-    
-    // Load content via AJAX
-    fetch(`ajax/load_tab.php?tab=${tabId}&subject_id=${subjectId}`)
-    .then(response => response.text())
-    .then(html => {
-        tabContent.innerHTML = html;
-    })
-    .catch(error => {
-        console.error('Error loading tab content:', error);
-        tabContent.innerHTML = '<div class="error">Error loading content</div>';
-    });
-}
-
-function renderMath() {
-    if (typeof MathJax !== 'undefined') {
-        MathJax.typesetPromise().then(() => {
-            document.body.classList.add('mathjax-processed');
-        }).catch((err) => {
-            console.error('MathJax typesetting error:', err);
-        });
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-}
-
-// Call this after loading new content:
-document.addEventListener('DOMContentLoaded', renderMath);
-
-// For AJAX-loaded content:
-function loadQuestionContent() {
-    // Your content loading code...
-    renderMath();
-}
-
-function renderQuestionText($text) {
-    // Convert \[ and \] to MathJax delimiters if needed
-    $text = htmlspecialchars($text);
-    // Preserve LaTeX content (don't escape \( \) \[ \])
-    $text = preg_replace('/\\\\([()\\[\\]])/', '\\\\$1', $text);
-    return $text;
-}
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(20px); }
+    }
+`;
+document.head.appendChild(style);
