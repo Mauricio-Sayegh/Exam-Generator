@@ -47,18 +47,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_test'])) {
     $question_text = isset($_POST['question_text']) ? trim($_POST['question_text']) : '';
     $mark = isset($_POST['mark']) ? (int)$_POST['mark'] : 1;
     $difficulty = isset($_POST['difficulty']) ? (int)$_POST['difficulty'] : 1;
+    $is_sub = isset($_POST['is_sub']) ? 1 : 0;
     
     // Get choices from form
     $choices = [];
-    $correct_answer = '';
+    $correct_answer = isset($_POST['correct_answer']) ? $_POST['correct_answer'] : '';
+    
+    // Debug line to check what's being received
+    // echo "Debug - Correct answer: " . $correct_answer;
+    
     foreach ($_POST['choices'] as $key => $choice_text) {
         if (!empty(trim($choice_text))) {
+            $is_correct = ($correct_answer == $key);
             $choices[$key] = [
                 'text' => $choice_text,
-                'is_correct' => isset($_POST['correct_answer']) && $_POST['correct_answer'] == $key
+                'is_correct' => $is_correct
             ];
             
-            if ($choices[$key]['is_correct']) {
+            if ($is_correct) {
                 $correct_answer = $key;
             }
         }
@@ -69,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_test'])) {
         $error = 'Question text is required';
     } elseif (empty($choices)) {
         $error = 'At least one answer choice is required';
-    } elseif (empty($correct_answer)) {
+    } elseif ($correct_answer === '') { // <-- Fix: check for empty string, not empty()
         $error = 'Please select the correct answer';
     } else {
         // Add question to test paper in session
@@ -78,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_test'])) {
             'question_text' => $question_text,
             'mark' => $mark,
             'difficulty' => $difficulty,
+            'is_sub' => $is_sub,
             'choices' => $choices,
             'correct_answer' => $correct_answer
         ];
@@ -107,8 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_test_paper'])) {
                     professor_ID, subject_ID, question_text, difficulty, mark,
                     ans_A, is_correct_A, ans_B, is_correct_B, 
                     ans_C, is_correct_C, ans_D, is_correct_D, ans_E, is_correct_E,
-                    group_num, date
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    group_num, date, is_sub
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?)
             ");
             
             // Prepare answer data (up to 5 answers)
@@ -117,16 +124,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_test_paper'])) {
                 $answers[] = ['text' => '', 'is_correct' => 0];
             }
             
+            // Convert boolean values to integers for database
+            $ans_A = $answers[0]['text'];
+            $is_correct_A = $answers[0]['is_correct'] ? 1 : 0;
+            $ans_B = $answers[1]['text'];
+            $is_correct_B = $answers[1]['is_correct'] ? 1 : 0;
+            $ans_C = $answers[2]['text'];
+            $is_correct_C = $answers[2]['is_correct'] ? 1 : 0;
+            $ans_D = $answers[3]['text'];
+            $is_correct_D = $answers[3]['is_correct'] ? 1 : 0;
+            $ans_E = $answers[4]['text'];
+            $is_correct_E = $answers[4]['is_correct'] ? 1 : 0;
+            
             $stmt->bind_param(
-                "iisiisisiisiiiii", 
+                "iisiisisiisiiiiii", 
                 $professor_id, $question['subject_id'], $question['question_text'], 
                 $question['difficulty'], $question['mark'],
-                $answers[0]['text'], $answers[0]['is_correct'],
-                $answers[1]['text'], $answers[1]['is_correct'],
-                $answers[2]['text'], $answers[2]['is_correct'],
-                $answers[3]['text'], $answers[3]['is_correct'],
-                $answers[4]['text'], $answers[4]['is_correct'],
-                $group_num
+                $ans_A, $is_correct_A,
+                $ans_B, $is_correct_B,
+                $ans_C, $is_correct_C,
+                $ans_D, $is_correct_D,
+                $ans_E, $is_correct_E,
+                $group_num, $question['is_sub']
             );
             
             if ($stmt->execute()) {
@@ -332,8 +351,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['clear_test_paper'])) {
                                         $fieldId = 'choices['.$key.']';
                                         echo '
                                         <div class="choice-item">
-                                            <input type="radio" name="correct_answer" value="'.$key.'" '.(isset($_POST['correct_answer']) && $_POST['correct_answer'] == $key ? 'checked' : '').'>
-                                            <input type="text" id="'.$fieldId.'" name="'.$fieldId.'" placeholder="Enter choice..." value="'.htmlspecialchars($choice).'" oninput="updatePreview()">
+                                            <input type="radio" id="correct_'.$key.'" name="correct_answer" value="'.$key.'" '.(isset($_POST['correct_answer']) && $_POST['correct_answer'] == $key ? 'checked' : '').'>
+                                            <input type="text" name="choices['.$key.']" placeholder="Answer choice '.($key+1).'" value="'.htmlspecialchars($choice).'">
                                             <div style="margin-left: 10px;">
                                                 <button type="button" class="symbol-button" onclick="insertSymbolIntoField(\''.$fieldId.'\', \'\\\\[ \\\\]\')">
                                                     <i class="fas fa-plus"></i> Eq
@@ -365,6 +384,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['clear_test_paper'])) {
                             <option value="2" <?php if (isset($_POST['difficulty']) && $_POST['difficulty'] == 2) echo 'selected'; ?>>Medium</option>
                             <option value="3" <?php if (isset($_POST['difficulty']) && $_POST['difficulty'] == 3) echo 'selected'; ?>>Hard</option>
                         </select>
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="is_sub" name="is_sub" value="1" <?php if (isset($_POST['is_sub'])) echo 'checked'; ?>>
+                        <label for="is_sub">Is Sub Question</label>
                     </div>
                     
                     <button type="submit" class="add-question">

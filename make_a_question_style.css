@@ -101,7 +101,6 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 5px;
-    padding: 5px;
     background-color: rgba(255,255,255,0.05);
     border-radius: 4px;
     margin-top: 5px;
@@ -340,4 +339,20 @@ textarea {
     .symbol-panel {
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     }
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 5px;
+}
+
+.checkbox-group label {
+    display: inline;
+    margin-bottom: 0;
 }

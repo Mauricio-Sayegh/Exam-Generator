@@ -43,7 +43,14 @@
     min-width: 200px;
 }
 
-.form-group input,
+.form-group input{
+    width: 97%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: -15px;
+}
+
 .form-group select {
     width: 100%;
     padding: 8px 12px;
@@ -84,6 +91,9 @@
 .btn-clear {
     background-color: #e74c3c;
     color: white;
+    width : 50px; 
+    height: 16px;
+    text-decoration: none;
 }
 
 .btn-clear:hover {
@@ -361,18 +371,6 @@
     width: 80%;
     max-width: 500px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-
-.close-modal {
-    float: right;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #777;
-}
-
-.close-modal:hover {
-    color: #333;
 }
 
 .modal-footer {

@@ -12,40 +12,61 @@ $professor_id = $_SESSION['user_id'];
 $error = '';
 $success = '';
 $questions = [];
-$selected_subject = null;
-$exam_date = '';
+$selected_subject = isset($_GET['subject_id']) ? $_GET['subject_id'] : (isset($_POST['subject_id']) ? $_POST['subject_id'] : null);
+$exam_date = isset($_POST['exam_date']) ? $_POST['exam_date'] : '';
 
 // Get professor's subjects
 $subjects = [];
 $stmt = $conn->prepare("SELECT subject_ID, subject_name FROM subject WHERE professor_ID = ?");
+if ($stmt === false) {
+    $error = "Database error: " . $conn->error;
+} else {
+    $stmt->bind_param("i", $professor_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $subjects[] = $row;
+    }
+    $stmt->close();
+}
+
+// Get universities
+$universities = [];
+$stmt = $conn->prepare("
+    SELECT u.university_name_en 
+    FROM university as u INNER JOIN professor_university as pu on u.university_ID = pu.university_ID
+    where pu.professor_ID = ?
+");
 $stmt->bind_param("i", $professor_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
-    $subjects[] = $row;
+    $universities[] = $row;
 }
 $stmt->close();
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['select_subject'])) {
-        // Step 1: Subject selection
-        $selected_subject = $_POST['subject_id'];
-        $exam_date = $_POST['exam_date'];
-        
-        if (empty($exam_date)) {
-            $error = "Exam date is required";
-        } else {
-            // Get questions for selected subject
-            $stmt = $conn->prepare("SELECT question_ID, question_text FROM question WHERE professor_ID = ? AND subject_ID = ?");
-            $stmt->bind_param("ii", $professor_id, $selected_subject);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            while ($row = $result->fetch_assoc()) {
-                $questions[] = $row;
-            }
-            $stmt->close();
+// Load questions when subject is selected
+if ($selected_subject) {
+    $stmt = $conn->prepare("SELECT question_ID, question_text, difficulty, mark FROM question WHERE professor_ID = ? AND subject_ID = ? ORDER BY difficulty, date DESC");
+    if ($stmt === false) {
+        $error = "Database error: " . $conn->error;
+    } else {
+        $stmt->bind_param("ii", $professor_id, $selected_subject);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $questions[] = $row;
         }
+        $stmt->close();
+    }
+}
+
+// Handle form submission for generating exam
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_exam']) && !empty($_POST['questions'])) {
+    if (empty($_POST['exam_date'])) {
+        $error = "Exam date is required";
+    } else {
+        $success = "Exam generated successfully!";
     }
 }
 ?>
@@ -56,148 +77,300 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Exam</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Basic styling - you can move this to a CSS file later */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .form-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        select, input[type="date"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        .btn-primary {
-            background-color: #3498db;
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: #2980b9;
-        }
-        .question-item {
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-    </style>
+    <link rel="stylesheet" href="sidebar.css">
+    <link rel="stylesheet" href="create_exam_style.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
 </head>
 <body>
-    <div class="container">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span>Exam Generator</span>
+            <button class="toggle-sidebar">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+        <div class="sidebar-content">
+            <div class="user-profile">
+                <div class="avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="user-info">
+                    <h3><?php echo htmlspecialchars($_SESSION['name']); ?></h3>
+                    <p>Professor in 
+                        <?php 
+                            for ($i = 0; $i < count($universities); $i++) {
+                                echo htmlspecialchars($universities[$i]['university_name_en']);
+                                if (count($universities) > 1) {
+                                    if ($i+2 == count($universities)) {
+                                        echo htmlspecialchars(" and ");
+                                    }
+                                    else if ($i+1 != count($universities)) {
+                                        echo htmlspecialchars(', ');
+                                    }
+                                }
+                            }
+                        ?> 
+                    </p>
+                </div>
+            </div>
+            
+            <nav class="dashboard-nav">
+                <a href="dashboard.php">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="my_subjects.php">
+                    <i class="fas fa-book"></i>
+                    <span>My Subjects</span>
+                </a>
+                <a href="create_exam.php" class="active">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Create Exam</span>
+                </a>
+                <a href="view_exams.php">
+                    <i class="fas fa-list"></i>
+                    <span>View Exams</span>
+                </a>
+                <a href="profile.php">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="logout.php" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="main-content">
         <h1><i class="fas fa-file-alt"></i> Create New Exam</h1>
         
         <?php if ($error): ?>
-            <div style="color: red; padding: 10px; margin-bottom: 20px; background-color: #ffebee; border-radius: 4px;">
+            <div class="alert alert-error">
                 <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
         
         <?php if ($success): ?>
-            <div style="color: green; padding: 10px; margin-bottom: 20px; background-color: #e8f5e9; border-radius: 4px;">
+            <div class="alert alert-success">
                 <?php echo htmlspecialchars($success); ?>
             </div>
         <?php endif; ?>
         
-        <form method="POST">
-            <div class="form-section">
-                <h2>1. Select Subject and Date</h2>
-                
-                <div class="form-group">
-                    <label for="subject_id">Subject:</label>
-                    <select id="subject_id" name="subject_id" required>
-                        <option value="">-- Select Subject --</option>
-                        <?php foreach ($subjects as $subject): ?>
-                            <option value="<?php echo $subject['subject_ID']; ?>"
-                                <?php if ($selected_subject == $subject['subject_ID']) echo 'selected'; ?>>
-                                <?php echo htmlspecialchars($subject['subject_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="exam_date">Exam Date:</label>
-                    <input type="date" id="exam_date" name="exam_date" 
-                           value="<?php echo htmlspecialchars($exam_date); ?>" required>
-                </div>
-                
-                <button type="submit" name="select_subject" class="btn btn-primary">
-                    <i class="fas fa-arrow-right"></i> Continue
-                </button>
-            </div>
-            
-            <?php if (!empty($questions) && $selected_subject): ?>
-            <div class="form-section">
-                <h2>2. Select Questions</h2>
-                
-                <div class="question-list">
-                    <?php foreach ($questions as $question): ?>
-                    <div class="question-item">
-                        <input type="checkbox" id="question_<?php echo $question['question_ID']; ?>" 
-                               name="questions[]" value="<?php echo $question['question_ID']; ?>">
-                        <label for="question_<?php echo $question['question_ID']; ?>">
-                            <?php echo htmlspecialchars($question['question_text']); ?>
-                        </label>
+        <form method="POST" id="examForm" action="generate_pdf.php">
+            <div class="exam-creation-container">
+                <div class="subject-selection">
+                    <h2>Select Subject and Date</h2>
+                    
+                    <div class="form-group">
+                        <label for="subject_id">Subject:</label>
+                        <select id="subject_id" name="subject_id" onchange="loadQuestions(this.value)" required>
+                            <option value="">-- Select Subject --</option>
+                            <?php foreach ($subjects as $subject): ?>
+                                <option value="<?php echo $subject['subject_ID']; ?>"
+                                    <?php if ($selected_subject == $subject['subject_ID']) echo 'selected'; ?>>
+                                    <?php echo htmlspecialchars($subject['subject_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <?php endforeach; ?>
+                    
+                    <div class="form-group">
+                        <label for="exam_date">Exam Date:</label>
+                        <input style="width:280px;" type="date" id="exam_date" name="exam_date" 
+                               value="<?php echo htmlspecialchars($exam_date); ?>" required>
+                    </div>
+                    
+                    <?php if (!empty($questions)): ?>
+                    <div class="exam-summary">
+                        <h3>Exam Summary</h3>
+                        <div class="summary-item">
+                            <span>Total Questions:</span>
+                            <span id="totalQuestions"><?php echo count($questions); ?></span>
+                        </div>
+                        <div class="summary-item">
+                            <span>Selected Questions:</span>
+                            <span id="selectedCount">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span>Total Points:</span>
+                            <span id="totalPoints">0</span>
+                        </div>
+                        
+                        <button type="submit" name="generate_exam" class="btn btn-generate">
+                            <i class="fas fa-file-pdf"></i> Generate Exam PDF
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 
-                <input type="hidden" name="subject_id" value="<?php echo $selected_subject; ?>">
-                <input type="hidden" name="exam_date" value="<?php echo htmlspecialchars($exam_date); ?>">
-                
-                <button type="submit" name="generate_exam" class="btn btn-primary">
-                    <i class="fas fa-file-pdf"></i> Generate Exam PDF (1 Token)
-                </button>
+                <div class="question-selection">
+                    <?php if (empty($questions) && $selected_subject): ?>
+                        <div class="no-questions-message">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>No questions found for this subject.</p>
+                            <a href="add_question.php?subject_id=<?php echo $selected_subject; ?>" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Questions
+                            </a>
+                        </div>
+                    <?php elseif (!empty($questions)): ?>
+                        <h2>Select Questions</h2>
+                        
+                        <div class="filter-controls">
+                            <div class="search-box">
+                                <input type="text" id="questionSearch" placeholder="Search questions..." onkeyup="filterQuestions()">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="difficulty-filter">
+                                <label>Filter by difficulty:</label>
+                                <select id="difficultyFilter" onchange="filterQuestions()">
+                                    <option value="0">All Difficulties</option>
+                                    <option value="1">Easy</option>
+                                    <option value="2">Medium</option>
+                                    <option value="3">Hard</option>
+                                </select>
+                            </div>
+                            <div class="selection-actions">
+                                <button type="button" class="btn btn-secondary" onclick="selectAllQuestions()">
+                                    <i class="fas fa-check-double"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="deselectAllQuestions()">
+                                    <i class="fas fa-times"></i> Deselect All
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="question-list">
+                            <?php foreach ($questions as $question): ?>
+                            <div class="question-card" data-difficulty="<?php echo $question['difficulty']; ?>" data-points="<?php echo $question['mark']; ?>">
+                                <div class="question-header">
+                                    <div class="difficulty-badge difficulty-<?php echo $question['difficulty']; ?>">
+                                        <?php echo $question['difficulty'] == 1 ? 'Easy' : ($question['difficulty'] == 2 ? 'Medium' : 'Hard'); ?>
+                                    </div>
+                                    <div class="question-actions">
+                                        <input type="checkbox" id="question_<?php echo $question['question_ID']; ?>" 
+                                               name="questions[]" value="<?php echo $question['question_ID']; ?>"
+                                               onchange="updateSelectedCount()">
+                                        <label for="question_<?php echo $question['question_ID']; ?>" class="checkbox-label"></label>
+                                    </div>
+                                </div>
+                                <div class="question-content">
+                                    <?php echo htmlspecialchars($question['question_text']); ?>
+                                </div>
+                                <div class="question-footer">
+                                    <span class="mark"><?php echo $question['mark']; ?> pts</span>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        
+                        <div class="no-results" style="display: none;">
+                            <i class="fas fa-search"></i>
+                            <p>No questions match your search criteria</p>
+                        </div>
+                    <?php elseif (empty($selected_subject)): ?>
+                        <div class="select-subject-message">
+                            <i class="fas fa-arrow-left"></i>
+                            <p>Please select a subject to view available questions</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <?php endif; ?>
         </form>
     </div>
-
     <script>
-        // Basic form submission handler
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    console.log('Form submitted');
-                    return true;
-                });
+        // Toggle sidebar
+        document.querySelector('.toggle-sidebar').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            
+            const icon = this.querySelector('i');
+            if (document.querySelector('.sidebar').classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
             }
+        });
+        
+        // Load questions when subject changes
+        function loadQuestions(subjectId) {
+            if (subjectId) {
+                window.location.href = 'create_exam.php?subject_id=' + subjectId;
+            }
+        }
+        
+        // Filter questions based on search and difficulty
+        function filterQuestions() {
+            const searchText = document.getElementById('questionSearch').value.toLowerCase();
+            const difficultyFilter = parseInt(document.getElementById('difficultyFilter').value);
+            const questionCards = document.querySelectorAll('.question-card');
+            let visibleCount = 0;
+            
+            questionCards.forEach(card => {
+                const questionText = card.querySelector('.question-content').textContent.toLowerCase();
+                const difficulty = parseInt(card.dataset.difficulty);
+                
+                const matchesSearch = questionText.includes(searchText);
+                const matchesDifficulty = difficultyFilter === 0 || difficulty === difficultyFilter;
+                
+                if (matchesSearch && matchesDifficulty) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show/hide no results message
+            const noResultsElement = document.querySelector('.no-results');
+            if (noResultsElement) {
+                noResultsElement.style.display = visibleCount === 0 ? 'flex' : 'none';
+            }
+        }
+        
+        // Update selected count and total points
+        function updateSelectedCount() {
+            const selectedCheckboxes = document.querySelectorAll('input[name="questions[]"]:checked');
+            const selectedCountElement = document.getElementById('selectedCount');
+            const totalPointsElement = document.getElementById('totalPoints');
+            
+            if (selectedCountElement) {
+                selectedCountElement.textContent = selectedCheckboxes.length;
+            }
+            
+            if (totalPointsElement) {
+                let totalPoints = 0;
+                selectedCheckboxes.forEach(checkbox => {
+                    const card = checkbox.closest('.question-card');
+                    totalPoints += parseInt(card.dataset.points || 0);
+                });
+                totalPointsElement.textContent = totalPoints;
+            }
+        }
+        
+        // Select all visible questions
+        function selectAllQuestions() {
+            const visibleQuestions = document.querySelectorAll('.question-card[style="display: block"] input[type="checkbox"], .question-card:not([style]) input[type="checkbox"]');
+            visibleQuestions.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateSelectedCount();
+        }
+        
+        // Deselect all questions
+        function deselectAllQuestions() {
+            const checkboxes = document.querySelectorAll('input[name="questions[]"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectedCount();
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
         });
     </script>
 </body>

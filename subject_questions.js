@@ -103,8 +103,15 @@ function initBulkActions() {
 }
 
 function initQuickDelete() {
-    document.querySelectorAll('.quick-delete').forEach(button => {
-        button.addEventListener('click', function(e) {
+    // Remove any existing event listeners first by cloning and replacing elements
+    document.querySelectorAll('.quick-delete').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
+    // Add a single event listener to each delete button
+    document.querySelectorAll('.quick-delete').forEach(btn => {
+        btn.addEventListener('click', function(e) {
             if (!confirm('Are you sure you want to delete this question?')) {
                 e.preventDefault();
             }
