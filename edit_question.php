@@ -18,7 +18,7 @@ if ($question_id <= 0) {
 // Verify the question belongs to the professor
 $professor_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("
-    SELECT q.*, s.subject_name, u.university_name_en 
+    SELECT q.*, s.subject_name, s.subject_ID, u.university_name_en 
     FROM question q
     JOIN subject s ON q.subject_ID = s.subject_ID
     JOIN university u ON s.university_ID = u.university_ID
@@ -46,17 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_question'])) {
     
     // Get choices from form
     $choices = [];
-    $correct_answer = '';
+    $correct_answer = isset($_POST['correct_answer']) ? $_POST['correct_answer'] : '';
     foreach ($_POST['choices'] as $key => $choice_text) {
         if (!empty(trim($choice_text))) {
             $choices[$key] = [
                 'text' => $choice_text,
-                'is_correct' => isset($_POST['correct_answer']) && $_POST['correct_answer'] == $key
+                'is_correct' => (string)$key === (string)$correct_answer
             ];
-            
-            if ($choices[$key]['is_correct']) {
-                $correct_answer = $key;
-            }
         }
     }
     
@@ -65,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_question'])) {
         $error = 'Question text is required';
     } elseif (empty($choices)) {
         $error = 'At least one answer choice is required';
-    } elseif (empty($correct_answer)) {
+    } elseif (!isset($_POST['correct_answer'])) {
         $error = 'Please select the correct answer';
     } else {
         // Update question in database
@@ -85,9 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_question'])) {
         // Prepare answer data (up to 5 answers)
         $answers = array_slice($choices, 0, 5);
         while (count($answers) < 5) {
-            $answers[] = ['text' => '', 'is_correct' => 0];
+            $answers[] = [
+                'text' => '',
+                'is_correct' => 0  // Explicitly set to integer 0, not empty string
+            ];
         }
         
+        // Convert boolean/string values to integers for database
+        foreach ($answers as &$answer) {
+            $answer['is_correct'] = $answer['is_correct'] ? 1 : 0;
+        }
         $stmt->bind_param(
             "siisisiisiisiii", 
             $question_text, $difficulty, $mark,
@@ -101,13 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_question'])) {
         
         if ($stmt->execute()) {
             $success = 'Question updated successfully!';
-            // Refresh question data
-            $stmt = $conn->prepare("SELECT * FROM question WHERE question_ID = ?");
-            $stmt->bind_param("i", $question_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
+            // Refresh question data with all required fields
+            $stmt2 = $conn->prepare("
+                SELECT q.*, s.subject_name, s.subject_ID, u.university_name_en 
+                FROM question q
+                JOIN subject s ON q.subject_ID = s.subject_ID
+                JOIN university u ON s.university_ID = u.university_ID
+                WHERE q.question_ID = ?
+            ");
+            $stmt2->bind_param("i", $question_id);
+            $stmt2->execute();
+            $result = $stmt2->get_result();
             $question = $result->fetch_assoc();
-            $stmt->close();
+            $stmt2->close();
         } else {
             $error = 'Error updating question: ' . $conn->error;
         }
@@ -147,53 +156,130 @@ for ($i = 0; $i < 5; $i++) {
     <script src="make_a_question_js.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="make_a_question_style.css">
-    <link rel="stylesheet" href="sidebar.css">
+    <link rel = "icon" class="fas fa-square-root-alt"> </icon>
 </head>
 <body>
 <div class="sidebar">
         <div class="sidebar-header">
-            <span>Exam Generator</span>
-            <button class="toggle-sidebar">
+            <span style="margin-left:8px;">Math Symbols</span>
+            <button class="toggle-sidebar" onclick="toggleSidebar()">
                 <i class="fas fa-chevron-left"></i>
             </button>
         </div>
         <div class="sidebar-content">
-            <div class="user-profile">
-                <div class="avatar">
-                    <i class="fas fa-user-circle"></i>
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-calculator"></i>
+                    <span class="category-name">Basic Operations</span>
                 </div>
-                <div class="user-info">
-                    <h3><?php echo htmlspecialchars($_SESSION['name']); ?></h3>
-                    <p>Professor</p>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('+')">+</button>
+                    <button class="symbol-button" onclick="insertSymbol('-')">-</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\times')">×</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\div')">÷</button>
+                    <button class="symbol-button" onclick="insertSymbol('=')">=</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\neq')">≠</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\pm')">±</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\cdot')">·</button>
                 </div>
             </div>
             
-            <nav class="dashboard-nav">
-                <a href="dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="my_subjects.php" class="active">
-                    <i class="fas fa-book"></i>
-                    <span>My Subjects</span>
-                </a>
-                <a href="create_exam.php">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Create Exam</span>
-                </a>
-                <a href="view_exams.php">
-                    <i class="fas fa-list"></i>
-                    <span>View Exams</span>
-                </a>
-                <a href="profile.php">
-                    <i class="fas fa-user-cog"></i>
-                    <span>Profile</span>
-                </a>
-                <a href="logout.php" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </nav>
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-infinity"></i>
+                    <span class="category-name">Calculus</span>
+                </div>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('\\int_{a}^{b}')">∫</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\iint')">∬</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\iiint')">∭</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\oint')">∮</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\frac{d}{dx}')">d/dx</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\frac{\\partial}{\\partial x}')">∂/∂x</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\nabla')">∇</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\Delta')">Δ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\lim_{x \\to a}')">lim</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\sum_{i=1}^{n}')">Σ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\prod_{i=1}^{n}')">Π</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\infty')">∞</button>
+                </div>
+            </div>
+            
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-greater-than-equal"></i>
+                    <span class="category-name">Algebra</span>
+                </div>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('\\frac{a}{b}')">a/b</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\sqrt{x}')">√x</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\sqrt[n]{x}')">ⁿ√x</button>
+                    <button class="symbol-button" onclick="insertSymbol('x^{n}')">xⁿ</button>
+                    <button class="symbol-button" onclick="insertSymbol('x_{n}')">xₙ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\leq')">≤</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\geq')">≥</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\approx')">≈</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\equiv')">≡</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\propto')">∝</button>
+                </div>
+            </div>
+            
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-shapes"></i>
+                    <span class="category-name">Geometry</span>
+                </div>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('\\pi')">π</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\theta')">θ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\alpha')">α</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\beta')">β</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\gamma')">γ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\sin')">sin</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\cos')">cos</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\tan')">tan</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\angle')">∠</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\perp')">⊥</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\parallel')">∥</button>
+                </div>
+            </div>
+            
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-superscript"></i>
+                    <span class="category-name">Advanced</span>
+                </div>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('\\forall')">∀</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\exists')">∃</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\emptyset')">∅</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\in')">∈</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\subset')">⊂</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\subseteq')">⊆</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\cup')">∪</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\cap')">∩</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\mathbb{R}')">ℝ</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\mathbb{Z}')">ℤ</button>
+                </div>
+            </div>
+            
+            <div class="category" onclick="toggleCategory(this)">
+                <div class="category-header">
+                    <i class="fas fa-grip-lines"></i>
+                    <span class="category-name">Matrices</span>
+                </div>
+                <div class="symbol-panel">
+                    <button class="symbol-button" onclick="insertSymbol('\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}')">2x2</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}')">[2x2]</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\begin{pmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i  \\end{pmatrix}')">3x3</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\begin{bmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{bmatrix}')">[3x3]</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\vec{v}')">v⃗</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\hat{i}')">î</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\times')">×</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\cdot')">·</button>
+                    <button class="symbol-button" onclick="insertSymbol('\\|v\\|')">‖v‖</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -232,12 +318,14 @@ for ($i = 0; $i < 5; $i++) {
                         <div id="choicesContainer">
                             <?php foreach ($choices as $key => $choice): ?>
                                 <div class="choice-item">
-                                    <input type="radio" name="correct_answer" value="<?php echo $key; ?>" <?php echo $key == $correct_answer ? 'checked' : ''; ?>>
+                                    <input type="radio" name="correct_answer" value="<?php echo $key; ?>" 
+                                           <?php echo (isset($_POST['correct_answer']) && $_POST['correct_answer'] == $key) || 
+                                                     (!isset($_POST['correct_answer']) && $key == $correct_answer) ? 'checked' : ''; ?>>
                                     <input type="text" id="choices[<?php echo $key; ?>]" name="choices[<?php echo $key; ?>]" 
                                            placeholder="Enter choice..." value="<?php echo htmlspecialchars($choice['text']); ?>" 
                                            oninput="updatePreview()">
                                     <div style="margin-left: 10px;">
-                                        <button type="button" class="symbol-button" onclick="insertSymbolIntoField('choices[<?php echo $key; ?>]', '\\\\[ \\\\]')">
+                                        <button type="button" class="symbol-button" onclick="insertSymbolIntoField('choices[<?php echo $key; ?>]', '\\[ \\]')">
                                             <i class="fas fa-plus"></i> Eq
                                         </button>
                                         <button type="button" class="symbol-button clear-btn" onclick="this.parentElement.parentElement.remove(); updatePreview()">

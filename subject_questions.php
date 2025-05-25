@@ -35,7 +35,7 @@ if (!$subject) {
 }
 
 // Pagination setup
-$questions_per_page = 10;
+$questions_per_page = 9;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $questions_per_page;
 
@@ -332,8 +332,7 @@ $conn->close();
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <a href="delete_question.php?id=<?php echo $question['question_ID']; ?>" 
-                                           class="btn-action quick-delete" title="Delete" 
-                                           onclick="return confirm('Are you sure you want to delete this question?');">
+                                           class="btn-action quick-delete" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </a>
                                     </div>
@@ -412,7 +411,6 @@ $conn->close();
     <!-- Modal for bulk actions -->
     <div id="bulk-modal" class="modal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
             <h3 id="modal-title">Bulk Action</h3>
             <div id="modal-body">
                 <!-- Content will be loaded here based on action -->

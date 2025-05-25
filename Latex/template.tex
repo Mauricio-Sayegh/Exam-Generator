@@ -1,0 +1,33 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{xcolor}
+\geometry{margin=1in}
+
+\title{<<SUBJECT>> - Exam}
+\author{University: <<UNIVERSITY>>}
+\date{Date: <<DATE>>}
+
+\pagestyle{empty}
+
+% Define command for inline choices + marks
+\newcommand{\choice}[3]{%
+    \textbf{#1}.~#2\hfill%
+    \ifx&#3&%
+    \else%
+        \rlap{\hspace{1em}[\textbf{#3 pts}]}%
+    \fi%
+}
+
+\begin{document}
+\maketitle
+
+\section*{Instructions}
+\begin{enumerate}
+    \item Answer all questions.
+    \item Select one correct answer per question.
+\end{enumerate}
+
+<<QUESTIONS>>
+
+\end{document}
