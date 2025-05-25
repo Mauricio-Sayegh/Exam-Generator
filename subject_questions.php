@@ -223,7 +223,7 @@ $conn->close();
                     <?php echo htmlspecialchars($subject['subject_name']); ?> Questions
                     <small><?php echo htmlspecialchars($subject['university_name_en']); ?></small>
                 </h1>
-                <a href="add_question.php?subject_id=<?php echo $subject_id; ?>" class="btn btn-primary">
+                <a href="make_a_question.php?subject_id=<?php echo $subject_id; ?>" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Add New Question
                 </a>
             </div>
@@ -298,7 +298,7 @@ $conn->close();
                     <div class="no-questions">
                         <i class="fas fa-question-circle"></i>
                         <p>No questions found</p>
-                        <a href="add_question.php?subject_id=<?php echo $subject_id; ?>" class="btn btn-primary">
+                        <a href="make_a_question.php?subject_id=<?php echo $subject_id; ?>" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Add Your First Question
                         </a>
                     </div>

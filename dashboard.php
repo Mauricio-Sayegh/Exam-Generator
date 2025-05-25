@@ -81,6 +81,7 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="sidebar.css">
+    <link rel="manifest" href="manifest.json">
     <script>
     MathJax = {
         tex: {
