@@ -108,7 +108,7 @@ $conn->close();
         }
         
     </style>
-<!-- <script>navigator.serviceWorker.register("service-worker.js")</script>  -->
+<script>navigator.serviceWorker.register("service-worker.js")</script>  
        
 </head>
 <body>
