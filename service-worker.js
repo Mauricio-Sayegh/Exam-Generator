@@ -1,6 +1,7 @@
 const CACHE_NAME = 'exam-generator-cache-v2';
 const STATIC_ASSETS = [
-    'offline.html'
+    'offline.html',
+    'dashboard.php',
 ];
 
 self.addEventListener('install', (event) => {
@@ -34,6 +35,28 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
+
+     // عند الطلب على dashboard.php
+  if (url.pathname.endsWith('dashboard.php')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // تحديث الكاش بأحدث نسخة
+          const clonedResponse = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, clonedResponse);
+          });
+          return response;
+        })
+        .catch(() => {
+          // عند انقطاع الاتصال: عرض آخر نسخة محفوظة في الكاش
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || caches.match('offline.html');
+          });
+        })
+    );
+    return;
+  }
 
     event.respondWith(
         fetch(request)
