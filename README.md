@@ -95,15 +95,17 @@ The system is built around the following core entities and relationships:
 
 ## 📸 Screenshots
 
-> Add your screenshots to a `docs/screenshots/` folder and update the paths below.
-
-| Dashboard | Create Exam |
-|-----------|-------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Create Exam](docs/screenshots/create-exam.png) |
-
-| Question Editor (with Math toolbar) | View Exams |
-|-------------------------------------|------------|
-| ![Add Question](docs/screenshots/add-question.png) | ![View Exams](docs/screenshots/view-exams.png) |
+| Login Page | Main Dashboard |
+|:----------:|:--------------:|
+| ![Login Page](docs/screenshots/Login-Page.png) | ![Main Dashboard](docs/screenshots/Main-Dashboard.png) |
+ 
+| Create Exam | My Subjects |
+|:-----------:|:-----------:|
+| ![Create Exam](docs/screenshots/Create-Exam.png) | ![My Subjects](docs/screenshots/My-Subjects.png) |
+ 
+| View Exams |
+|:----------:|
+| ![View Exams](docs/screenshots/View-Exams.png) |
 
 ---
 
@@ -177,9 +179,7 @@ Planned enhancements discussed in the thesis:
 
 The full graduation thesis (system analysis, ERD, use-case diagram, interface walkthrough, and references) is included in this repository:
 
-📘 **[Read the full thesis (PDF)](./Automated_Exam_Generation_System_Thesis.pdf)**
-
-> Rename the PDF to match the file you upload, and consider redacting any personal contact details (email, phone) visible in the interface screenshots before publishing.
+📘 **[Read the full thesis (PDF)](./Exam-Generator-4th-Year-Thesis.pdf)**
 
 ---
 
