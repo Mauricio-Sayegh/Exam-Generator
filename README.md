@@ -179,7 +179,7 @@ Planned enhancements discussed in the thesis:
 
 The full graduation thesis (system analysis, ERD, use-case diagram, interface walkthrough, and references) is included in this repository:
 
-📘 **[Read the full thesis (PDF)](./Exam-Generator-4th-Year-Thesis.pdf)**
+📘 **[Read the full thesis (PDF)](./docs/Exam-Generator-4th-Year-Thesis.pdf)**
 
 ---
 
